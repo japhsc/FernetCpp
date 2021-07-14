@@ -17,12 +17,12 @@
 
 constexpr auto FERNET_VERSION = 0x80;
 
-constexpr auto FERNET_OK = 1;
-constexpr auto FERNET_ERROR_POINTER = 0;
-constexpr auto FERNET_ERROR_MALLOC = -1;
-constexpr auto FERNET_ERROR_VERSION = -2;
-constexpr auto FERNET_ERROR_TIMESTAMP = -3;
-constexpr auto FERNET_ERROR_WRONG_KEY = -4;
+constexpr auto FERNET_OK = 0;
+constexpr auto FERNET_ERROR_POINTER = -1;
+constexpr auto FERNET_ERROR_MALLOC = -2;
+constexpr auto FERNET_ERROR_VERSION = -3;
+constexpr auto FERNET_ERROR_TIMESTAMP = -4;
+constexpr auto FERNET_ERROR_WRONG_KEY = -5;
 
 std::string get_key_from_password(std::string &password) {
     CryptoPP::SHA256 hash;
@@ -91,7 +91,7 @@ class FERNET {
 			return true;
 		}
 
-		bool byte_HMAC(BYTE* cipher, size_t *cipherLen, byte* d){
+		bool byte_HMAC(BYTE* cipher, size_t *cipherLen, BYTE* d){
 			CryptoPP::HMAC< CryptoPP::SHA256 > hmac(sgn_key, sgn_key.size());
 			hmac.Update(cipher, *cipherLen);
 			hmac.Final(d);
@@ -275,7 +275,7 @@ class FERNET {
 			BYTE* _cipher = 0;
 			size_t _cipherLen;
 			base64_decode(_token, _tokenLen, &_cipher, &_cipherLen);
-			bool ret = decrypt(_cipher, _cipherLen, _plain, _plainLen);
+			bool ret = !decrypt(_cipher, _cipherLen, _plain, _plainLen);
 			free(_cipher);
 			return ret;
 		}
