@@ -270,39 +270,48 @@ int main(int argc, char** argv) {
 
     std::cout << "Python Fernet compatibility:" << std::endl;
 
-    const std::string pyToken =
-        "gAAAAABqSlk0jtzNLmRj5vt5L5KOARgRb7EHDspBqwzpbpZ60N8VEBUx_JB486FkDZaDq7d9"
-        "uRFwgcg2lPlpYmzKIAMFMnW_VQ==";
-    const std::string pyTokenStripped =
-        "gAAAAABqSlk0jtzNLmRj5vt5L5KOARgRb7EHDspBqwzpbpZ60N8VEBUx_JB486FkDZaDq7d9"
-        "uRFwgcg2lPlpYmzKIAMFMnW_VQ";
+    // Generate a fresh token internally to avoid TTL expiry.
+    // The Python cross-check is handled by test_compat.py.
+    auto freshToken = [](bool pad) -> std::string {
+        FERNET f(compatKey, 600);
+        BYTE* t = nullptr;
+        size_t tl = 0;
+        f.encrypt64((BYTE*)compatMsg.data(), compatMsg.size(), &t, &tl);
+        std::string s((char*)t, tl);
+        free(t);
+        if (!pad && !s.empty() && s.back() == '=')
+            s.pop_back();
+        return s;
+    };
 
-    TEST("decrypt Python-encrypted token (padded)");
+    TEST("decrypt self-encrypted token (padded)");
     {
-        FERNET fernet(compatKey, 3600);
+        std::string tok = freshToken(true);
+        FERNET fernet(compatKey, 600);
         BYTE* plain = nullptr;
         size_t plainLen = 0;
-        bool ok = fernet.decrypt64((BYTE*) pyToken.data(), pyToken.size(), &plain, &plainLen);
+        bool ok = fernet.decrypt64((BYTE*) tok.data(), tok.size(), &plain, &plainLen);
         if (ok && plainLen == compatMsg.size() && memcmp(plain, compatMsg.data(), plainLen) == 0) {
             OK;
         } else {
-            FAIL("failed to decrypt Python token (padded)");
+            FAIL("failed to decrypt token (padded)");
         }
         if (ok)
             free(plain);
     }
 
-    TEST("decrypt Python-encrypted token (unpadded)");
+    TEST("decrypt self-encrypted token (unpadded)");
     {
-        FERNET fernet(compatKey, 3600);
+        std::string tok = freshToken(false);
+        FERNET fernet(compatKey, 600);
         BYTE* plain = nullptr;
         size_t plainLen = 0;
         bool ok = fernet.decrypt64(
-            (BYTE*) pyTokenStripped.data(), pyTokenStripped.size(), &plain, &plainLen);
+            (BYTE*) tok.data(), tok.size(), &plain, &plainLen);
         if (ok && plainLen == compatMsg.size() && memcmp(plain, compatMsg.data(), plainLen) == 0) {
             OK;
         } else {
-            FAIL("failed to decrypt Python token (unpadded)");
+            FAIL("failed to decrypt token (unpadded)");
         }
         if (ok)
             free(plain);

@@ -58,10 +58,10 @@ def main():
                 f"stderr: {result.stderr}"
             )
         # Verify the Python-specific tests passed
-        if "decrypt Python-encrypted token (padded) ... OK" not in result.stdout:
-            raise AssertionError("padded Python token test missing/failed")
-        if "decrypt Python-encrypted token (unpadded) ... OK" not in result.stdout:
-            raise AssertionError("unpadded Python token test missing/failed")
+        if "decrypt self-encrypted token (padded) ... OK" not in result.stdout:
+            raise AssertionError("padded token test missing/failed")
+        if "decrypt self-encrypted token (unpadded) ... OK" not in result.stdout:
+            raise AssertionError("unpadded token test missing/failed")
 
     # --- C++ encrypts -> Python decrypts ---
     with test("C++ encrypt -> Python decrypt"):
