@@ -273,14 +273,11 @@ public:
             return false;
         size_t preTokenLen = _tokenLen - hmac_len;
         BYTE* hmac_token = _token + preTokenLen;
-        BYTE* hmac_calc = (BYTE*) malloc(hmac_len);
-        if (!hmac_calc)
-            return false;
+        BYTE hmac_calc[CryptoPP::HMAC<CryptoPP::SHA256>::DIGESTSIZE];
         byte_HMAC(_token, &preTokenLen, hmac_calc);
         volatile int result = 0;
         for (size_t i = 0; i < hmac_len; ++i)
             result |= hmac_token[i] ^ hmac_calc[i];
-        free(hmac_calc);
         return result == 0;
     }
 
