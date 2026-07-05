@@ -98,9 +98,9 @@ private:
         return true;
     }
 
-    bool byte_HMAC(BYTE* cipher, size_t* cipherLen, BYTE* d) {
+    bool byte_HMAC(const BYTE* cipher, size_t cipherLen, BYTE* d) {
         CryptoPP::HMAC<CryptoPP::SHA256> hmac(sgn_key, sgn_key.size());
-        hmac.Update(cipher, *cipherLen);
+        hmac.Update(cipher, cipherLen);
         hmac.Final(d);
         return true;
     }
@@ -209,7 +209,7 @@ public:
 
         size_t pre_token_len = header_len + cipher_len;
         BYTE* hmac = token.data() + pre_token_len;
-        byte_HMAC(token.data(), &pre_token_len, hmac);
+        byte_HMAC(token.data(), pre_token_len, hmac);
 
         token.resize(pre_token_len + hmac_len);
         return token;
@@ -257,7 +257,7 @@ public:
         size_t preTokenLen = _tokenLen - hmac_len;
         const BYTE* hmac_token = _token + preTokenLen;
         BYTE hmac_calc[CryptoPP::HMAC<CryptoPP::SHA256>::DIGESTSIZE];
-        byte_HMAC(const_cast<BYTE*>(_token), &preTokenLen, hmac_calc);
+        byte_HMAC(_token, preTokenLen, hmac_calc);
         volatile int result = 0;
         for (size_t i = 0; i < hmac_len; ++i)
             result |= hmac_token[i] ^ hmac_calc[i];
