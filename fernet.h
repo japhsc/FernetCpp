@@ -275,7 +275,7 @@ class FERNET {
 			BYTE* _cipher = 0;
 			size_t _cipherLen;
 			base64_decode(_token, _tokenLen, &_cipher, &_cipherLen);
-			bool ret = !decrypt(_cipher, _cipherLen, _plain, _plainLen);
+			bool ret = decrypt(_cipher, _cipherLen, _plain, _plainLen) == FERNET_OK;
 			free(_cipher);
 			return ret;
 		}
