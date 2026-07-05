@@ -25,7 +25,7 @@ constexpr auto FERNET_ERROR_VERSION = -3;
 constexpr auto FERNET_ERROR_TIMESTAMP = -4;
 constexpr auto FERNET_ERROR_WRONG_KEY = -5;
 
-std::string get_key_from_password(const std::string& password) {
+static std::string get_key_from_password(const std::string& password) {
     CryptoPP::SHA256 hash;
     BYTE digest[CryptoPP::SHA256::DIGESTSIZE];
     hash.CalculateDigest(digest, (BYTE*) password.c_str(), password.length());
