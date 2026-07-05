@@ -168,7 +168,13 @@ class FERNET {
 			return str_key;
 		}
 	
-		int encrypt(	BYTE* _plain, const size_t _plain_len, 
+		/// Encrypt plaintext into a Fernet token.
+		/// @param _plain      Input plaintext bytes
+		/// @param _plain_len  Length of the plaintext
+		/// @param _token      [out] Allocated Fernet token bytes (caller must free)
+		/// @param _token_len  [out] Length of the token
+		/// @return FERNET_OK on success, or a negative error code
+		int encrypt(	BYTE* _plain, const size_t _plain_len,
 						BYTE** _token, size_t *_token_len )
 		{
 			if (!_plain) return FERNET_ERROR_POINTER;
@@ -210,7 +216,13 @@ class FERNET {
 			return FERNET_OK;
 		}
 
-		int decrypt(	BYTE* _token, const size_t _token_len, 
+		/// Decrypt a Fernet token back into plaintext.
+		/// @param _token      Input Fernet token bytes
+		/// @param _token_len  Length of the token
+		/// @param _plain      [out] Allocated decrypted plaintext (caller must free)
+		/// @param _plain_len  [out] Length of the plaintext
+		/// @return FERNET_OK on success, or a negative error code
+		int decrypt(	BYTE* _token, const size_t _token_len,
 						BYTE** _plain, size_t *_plain_len)
 		{
 			if (!_token) return FERNET_ERROR_POINTER;
@@ -261,6 +273,12 @@ class FERNET {
 			return result == 0;
 		}
 		
+		/// Encrypt plaintext and return a base64-encoded Fernet token string.
+		/// @param _plain      Input plaintext bytes
+		/// @param _plainLen   Length of the plaintext
+		/// @param _token      [out] Allocated base64-encoded token (caller must free)
+		/// @param _tokenLen   [out] Length of the base64-encoded token
+		/// @return true on success
 		bool encrypt64(BYTE* _plain, const size_t _plainLen, BYTE** _token, size_t* _tokenLen) {
 			BYTE* _cipher = 0;
 			size_t _cipherLen;
@@ -271,6 +289,12 @@ class FERNET {
 			return true;
 		}
 
+		/// Decrypt a base64-encoded Fernet token back into plaintext.
+		/// @param _token      Input base64-encoded Fernet token bytes
+		/// @param _tokenLen   Length of the base64-encoded token
+		/// @param _plain      [out] Allocated decrypted plaintext (caller must free)
+		/// @param _plainLen   [out] Length of the plaintext
+		/// @return true on success
 		bool decrypt64(BYTE* _token, const size_t _tokenLen, BYTE** _plain, size_t* _plainLen) {
 			BYTE* _cipher = 0;
 			size_t _cipherLen;
