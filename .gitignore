@@ -1,1 +1,12 @@
+# Build artifacts
+test_fernet
+*.o
+*.out
+*.exe
 
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

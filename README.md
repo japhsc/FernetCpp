@@ -4,7 +4,15 @@ An implementation of [Fernet](https://github.com/fernet/spec/blob/master/Spec.md
 
 ## Dependencies
 
-- [Crypto++](https://www.cryptopp.com/) (header-only usage; link with `-lcryptopp`)
+- [Crypto++](https://www.cryptopp.com/) - install via apt or build from source:
+  ```sh
+  # Debian / Ubuntu
+  sudo apt install libcrypto++-dev
+
+  # Or build from source
+  git clone https://github.com/weidai11/cryptopp.git
+  cd cryptopp && make -j$(nproc) && sudo make install
+  ```
 - C++17 or later
 
 ## Usage
@@ -143,6 +151,14 @@ Derives a base64-encoded Fernet key from a password using SHA-256.
 # Compile your program with Crypto++
 g++ -std=c++17 -I. main.cpp -o main -lcryptopp
 ```
+
+## Testing
+
+```sh
+make test    # build and run the compatibility test suite
+```
+
+The test suite verifies C++ round-trips, error handling, and cross-compatibility with Python Fernet (`cryptography` library).
 
 ## Formatting
 

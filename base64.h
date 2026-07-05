@@ -99,6 +99,15 @@ static void base64_decode(BYTE* b_in, size_t b_in_len, BYTE** b_out, size_t* b_o
         (*b_out)[b++] = ((base64_T[b_in[a + 2]] & 0x3) << 6) + base64_T[b_in[a + 3]];
         a += 4;
     }
+    // Handle unpadded input (e.g. Python Fernet strips trailing '=')
+    if (pad == 2) {
+        (*b_out)[b++] = (base64_T[b_in[a]] << 2) + ((base64_T[b_in[a + 1]] & 0x30) >> 4);
+    } else if (pad == 3) {
+        (*b_out)[b++] = (base64_T[b_in[a]] << 2) + ((base64_T[b_in[a + 1]] & 0x30) >> 4);
+        if (base64_T[b_in[a + 2]] != 255)
+            (*b_out)[b++] = ((base64_T[b_in[a + 1]] & 0xf) << 4)
+                            + ((base64_T[b_in[a + 2]] & 0x3c) >> 2);
+    }
     *b_out_len = b;
 }
 

@@ -1,6 +1,8 @@
 #ifndef ENDIAN_H
 #define ENDIAN_H
 
+#include <stdint.h>
+
 #ifdef _MSC_VER
     #include <stdlib.h>
     #define bswap_32(x) _byteswap_ulong(x)
@@ -51,18 +53,6 @@ uint64_t big_to_system_endian(uint64_t big) {
     if (is_big_endian())
         return big;
     return bswap_64(big);
-}
-
-uint32_t system_to_big_endian(uint32_t system) {
-    if (is_big_endian())
-        return system;
-    return bswap_32(system);
-}
-
-uint32_t big_to_system_endian(uint32_t big) {
-    if (is_big_endian())
-        return big;
-    return bswap_32(big);
 }
 
 #endif
