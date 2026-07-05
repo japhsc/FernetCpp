@@ -17,7 +17,7 @@ An implementation of [Fernet](https://github.com/fernet/spec/blob/master/Spec.md
 
 ## Usage
 
-FernetCpp is a single-header library. Copy `fernet.h`, `base64.h`, `endian.h` (and optionally `print.h`) into your project and include:
+FernetCpp is a single-header library. Copy `fernet.h`, `base64.h`, and `endian.h` into your project and include:
 
 ```cpp
 #include "fernet.h"
