@@ -12,8 +12,9 @@
 #include <chrono>
 #include <ctime>  // std::time
 
-#include <stdlib.h>  // malloc, realloc
-#include <assert.h>  // assert
+#include <cstdlib>  // malloc, free
+#include <cstring>  // memcpy, memset
+#include <cassert>  // assert
 
 constexpr auto FERNET_VERSION = 0x80;
 
@@ -24,7 +25,7 @@ constexpr auto FERNET_ERROR_VERSION = -3;
 constexpr auto FERNET_ERROR_TIMESTAMP = -4;
 constexpr auto FERNET_ERROR_WRONG_KEY = -5;
 
-std::string get_key_from_password(std::string& password) {
+std::string get_key_from_password(const std::string& password) {
     CryptoPP::SHA256 hash;
     BYTE digest[CryptoPP::SHA256::DIGESTSIZE];
     hash.CalculateDigest(digest, (BYTE*) password.c_str(), password.length());
@@ -83,8 +84,12 @@ private:
     }
 
     bool unpad(BYTE* cipher, size_t* cipherLen) {
-        char paddLen = *(cipher + *cipherLen - 1);
-        *cipherLen -= (size_t) paddLen;
+        if (*cipherLen == 0 || *cipherLen > block_len + 256)
+            return false;
+        unsigned char paddLen = *(cipher + *cipherLen - 1);
+        if (paddLen == 0 || paddLen > block_len || paddLen > *cipherLen)
+            return false;
+        *cipherLen -= paddLen;
         return true;
     }
 
@@ -130,7 +135,7 @@ private:
     bool valid_age(const uint64_t ts_big) {
         int64_t t0 = big_to_system_endian(ts_big);
         int64_t t1 = timestamp();
-        uint64_t delta = abs(t1 - t0);
+        uint64_t delta = llabs(t1 - t0);
         return (delta < ttl_sec);
     }
 
@@ -203,7 +208,10 @@ public:
 
         // Encrypt
         cipher_len = _plain_len;
-        byte_encrypt(iv, _plain, cipher, &cipher_len);
+        if (!byte_encrypt(iv, _plain, cipher, &cipher_len)) {
+            free(*_token);
+            return FERNET_ERROR_MALLOC;
+        }
 
         size_t pre_token_len = header_len + cipher_len;
         BYTE* hmac = *_token + pre_token_len;
@@ -253,7 +261,10 @@ public:
         *_plain_len = _token_len - header_len - hmac_len;
 
         CryptoPP::SecByteBlock iv(byte_iv, block_len);
-        byte_decrypt(iv, cipher, *_plain, _plain_len);
+        if (!byte_decrypt(iv, cipher, *_plain, _plain_len)) {
+            free(*_plain);
+            return FERNET_ERROR_WRONG_KEY;
+        }
         return FERNET_OK;
     }
 
