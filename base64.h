@@ -50,7 +50,7 @@ constexpr BYTE base64_T[] = {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 2
 
 #endif
 
-static void base64_encode(BYTE* b_in, size_t b_in_len, BYTE** b_out, size_t* b_out_len) {
+static void base64_encode(const BYTE* b_in, size_t b_in_len, BYTE** b_out, size_t* b_out_len) {
 
     size_t stp = b_in_len / 3;
     size_t pad = b_in_len % 3;
@@ -80,7 +80,7 @@ static void base64_encode(BYTE* b_in, size_t b_in_len, BYTE** b_out, size_t* b_o
     }
 }
 
-static void base64_decode(BYTE* b_in, size_t b_in_len, BYTE** b_out, size_t* b_out_len) {
+static void base64_decode(const BYTE* b_in, size_t b_in_len, BYTE** b_out, size_t* b_out_len) {
 
     size_t stp = b_in_len / 4;
     size_t pad = b_in_len % 4;

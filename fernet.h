@@ -15,6 +15,7 @@
 #include <cstdlib>  // malloc, free
 #include <cstring>  // memcpy, memset
 #include <cassert>  // assert
+#include <string_view>
 
 constexpr auto FERNET_VERSION = 0x80;
 
@@ -25,10 +26,10 @@ constexpr auto FERNET_ERROR_VERSION = -3;
 constexpr auto FERNET_ERROR_TIMESTAMP = -4;
 constexpr auto FERNET_ERROR_WRONG_KEY = -5;
 
-static std::string get_key_from_password(const std::string& password) {
+[[nodiscard]] static std::string get_key_from_password(std::string_view password) {
     CryptoPP::SHA256 hash;
     BYTE digest[CryptoPP::SHA256::DIGESTSIZE];
-    hash.CalculateDigest(digest, (BYTE*) password.c_str(), password.length());
+    hash.CalculateDigest(digest, (BYTE*) password.data(), password.size());
     /*
     CryptoPP::HexEncoder encoder;
     std::string output;
@@ -73,7 +74,7 @@ private:
         return key;
     }
 
-    int pad_len(size_t len, int blocksize) { return blocksize - len % blocksize; }
+    int pad_len(size_t len, int blocksize) noexcept { return blocksize - len % blocksize; }
 
     bool pad(BYTE* cipher, size_t* cipherLen) {
         int paddLen = pad_len(*cipherLen, block_len);
@@ -122,17 +123,17 @@ private:
         return false;
     }
 
-    uint64_t timestamp() {
+    uint64_t timestamp() noexcept {
         auto unix_timestamp = std::chrono::seconds(std::time(NULL));
         return (uint64_t) unix_timestamp.count();
     }
 
-    uint64_t timestamp_big() {
+    uint64_t timestamp_big() noexcept {
         // Timestamp: 64-bit unsigned big-endian integer
         return system_to_big_endian(timestamp());
     }
 
-    bool valid_age(const uint64_t ts_big) {
+    bool valid_age(const uint64_t ts_big) noexcept {
         int64_t t0 = big_to_system_endian(ts_big);
         int64_t t1 = timestamp();
         uint64_t delta = llabs(t1 - t0);
@@ -140,10 +141,10 @@ private:
     }
 
 public:
-    FERNET(std::string _key = "", uint64_t _ttl_sec = 60): ttl_sec(_ttl_sec) {
+    FERNET(std::string_view _key = "", uint64_t _ttl_sec = 60): ttl_sec(_ttl_sec) {
         BYTE* byte_key;
         size_t byte_key_len;
-        base64_decode((BYTE*) _key.data(), _key.size(), &byte_key, &byte_key_len);
+        base64_decode((const BYTE*) _key.data(), _key.size(), &byte_key, &byte_key_len);
         if (byte_key_len == fernet_key_len) {
             const BYTE* byte_sgn = byte_key;
             const BYTE* byte_aes = byte_sgn + key_len;
@@ -169,7 +170,7 @@ public:
 
     ~FERNET() {}
 
-    std::string get_key() { return str_key; }
+    [[nodiscard]] std::string get_key() { return str_key; }
 
     /// Encrypt plaintext into a Fernet token.
     /// @param _plain      Input plaintext bytes
@@ -177,7 +178,7 @@ public:
     /// @param _token      [out] Allocated Fernet token bytes (caller must free)
     /// @param _token_len  [out] Length of the token
     /// @return FERNET_OK on success, or a negative error code
-    int encrypt(BYTE* _plain, const size_t _plain_len, BYTE** _token, size_t* _token_len) {
+    [[nodiscard]] int encrypt(BYTE* _plain, const size_t _plain_len, BYTE** _token, size_t* _token_len) {
         if (!_plain)
             return FERNET_ERROR_POINTER;
 
@@ -228,7 +229,7 @@ public:
     /// @param _plain      [out] Allocated decrypted plaintext (caller must free)
     /// @param _plain_len  [out] Length of the plaintext
     /// @return FERNET_OK on success, or a negative error code
-    int decrypt(BYTE* _token, const size_t _token_len, BYTE** _plain, size_t* _plain_len) {
+    [[nodiscard]] int decrypt(BYTE* _token, const size_t _token_len, BYTE** _plain, size_t* _plain_len) {
         if (!_token)
             return FERNET_ERROR_POINTER;
 
@@ -268,7 +269,7 @@ public:
         return FERNET_OK;
     }
 
-    bool verify(BYTE* _token, const size_t _tokenLen) {
+    [[nodiscard]] bool verify(BYTE* _token, const size_t _tokenLen) {
         if (!_token)
             return false;
         size_t preTokenLen = _tokenLen - hmac_len;
@@ -287,7 +288,7 @@ public:
     /// @param _token      [out] Allocated base64-encoded token (caller must free)
     /// @param _tokenLen   [out] Length of the base64-encoded token
     /// @return true on success
-    bool encrypt64(BYTE* _plain, const size_t _plainLen, BYTE** _token, size_t* _tokenLen) {
+    [[nodiscard]] bool encrypt64(BYTE* _plain, const size_t _plainLen, BYTE** _token, size_t* _tokenLen) {
         BYTE* _cipher = 0;
         size_t _cipherLen;
         if (encrypt(_plain, _plainLen, &_cipher, &_cipherLen) != FERNET_OK)
@@ -303,7 +304,7 @@ public:
     /// @param _plain      [out] Allocated decrypted plaintext (caller must free)
     /// @param _plainLen   [out] Length of the plaintext
     /// @return true on success
-    bool decrypt64(BYTE* _token, const size_t _tokenLen, BYTE** _plain, size_t* _plainLen) {
+    [[nodiscard]] bool decrypt64(BYTE* _token, const size_t _tokenLen, BYTE** _plain, size_t* _plainLen) {
         BYTE* _cipher = 0;
         size_t _cipherLen;
         base64_decode(_token, _tokenLen, &_cipher, &_cipherLen);

@@ -35,7 +35,7 @@
     #include <byteswap.h>
 #endif
 
-static bool is_big_endian(void) {
+static bool is_big_endian(void) noexcept {
     union {
         uint32_t i;
         char c[4];
@@ -43,13 +43,13 @@ static bool is_big_endian(void) {
     return bint.c[0] == 1;
 }
 
-static uint64_t system_to_big_endian(uint64_t system) {
+static uint64_t system_to_big_endian(uint64_t system) noexcept {
     if (is_big_endian())
         return system;
     return bswap_64(system);
 }
 
-static uint64_t big_to_system_endian(uint64_t big) {
+static uint64_t big_to_system_endian(uint64_t big) noexcept {
     if (is_big_endian())
         return big;
     return bswap_64(big);

@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
         FERNET fernet(compatKey, 3600);
         BYTE* token = nullptr;
         size_t tokenLen = 0;
-        fernet.encrypt64((BYTE*) compatMsg.data(), compatMsg.size(), &token, &tokenLen);
+        assert(fernet.encrypt64((BYTE*) compatMsg.data(), compatMsg.size(), &token, &tokenLen));
         std::cout.write((char*) token, tokenLen);
         free(token);
         return 0;
@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
 
         BYTE* token = nullptr;
         size_t tokenLen = 0;
-        fernet1.encrypt64((BYTE*) msg.data(), msg.size(), &token, &tokenLen);
+        assert(fernet1.encrypt64((BYTE*) msg.data(), msg.size(), &token, &tokenLen));
 
         BYTE* plain = nullptr;
         size_t plainLen = 0;
@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
 
         BYTE* token = nullptr;
         size_t tokenLen = 0;
-        fernet.encrypt64((BYTE*) msg.data(), msg.size(), &token, &tokenLen);
+        assert(fernet.encrypt64((BYTE*) msg.data(), msg.size(), &token, &tokenLen));
 
         BYTE* plain = nullptr;
         size_t plainLen = 0;
@@ -170,7 +170,8 @@ int main(int argc, char** argv) {
 
         BYTE* token = nullptr;
         size_t tokenLen = 0;
-        fernet.encrypt((BYTE*) msg.data(), msg.size(), &token, &tokenLen);
+        int rcEnc = fernet.encrypt((BYTE*) msg.data(), msg.size(), &token, &tokenLen);
+        assert(rcEnc == FERNET_OK);
 
         // Flip a bit in the HMAC portion (last byte of raw binary token)
         token[tokenLen - 1] ^= 0x01;
@@ -193,7 +194,7 @@ int main(int argc, char** argv) {
 
         BYTE* token = nullptr;
         size_t tokenLen = 0;
-        fernet.encrypt64((BYTE*) msg.data(), msg.size(), &token, &tokenLen);
+        assert(fernet.encrypt64((BYTE*) msg.data(), msg.size(), &token, &tokenLen));
 
         // Decode, flip version byte, re-encode
         BYTE* raw = nullptr;
@@ -276,7 +277,7 @@ int main(int argc, char** argv) {
         FERNET f(compatKey, 600);
         BYTE* t = nullptr;
         size_t tl = 0;
-        f.encrypt64((BYTE*)compatMsg.data(), compatMsg.size(), &t, &tl);
+        assert(f.encrypt64((BYTE*)compatMsg.data(), compatMsg.size(), &t, &tl));
         std::string s((char*)t, tl);
         free(t);
         if (!pad && !s.empty() && s.back() == '=')
@@ -322,7 +323,7 @@ int main(int argc, char** argv) {
         FERNET fernet(compatKey, 3600);
         BYTE* token = nullptr;
         size_t tokenLen = 0;
-        fernet.encrypt64((BYTE*) compatMsg.data(), compatMsg.size(), &token, &tokenLen);
+        assert(fernet.encrypt64((BYTE*) compatMsg.data(), compatMsg.size(), &token, &tokenLen));
 
         BYTE* plain = nullptr;
         size_t plainLen = 0;
