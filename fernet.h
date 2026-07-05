@@ -48,7 +48,7 @@ class FERNET {
     /*
      * TOKEN:
      * <--------HEADER---------> <--cipher--> <--->
-     * Version ‖ Timestamp ‖ IV ‖ Ciphertext ‖ HMAC
+     * Version | Timestamp | IV | Ciphertext | HMAC
      */
 private:
     uint64_t ttl_sec;
