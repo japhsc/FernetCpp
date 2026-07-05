@@ -1,5 +1,5 @@
 #ifndef ENDIAN_H
-#define	ENDIAN_H
+#define ENDIAN_H
 
 #ifdef _MSC_VER
     #include <stdlib.h>
@@ -38,27 +38,31 @@ bool is_big_endian(void) {
         uint32_t i;
         char c[4];
     } bint = {0x01020304};
-    return bint.c[0] == 1; 
+    return bint.c[0] == 1;
 }
 
 uint64_t system_to_big_endian(uint64_t system) {
-	if (is_big_endian()) return system;
-	return bswap_64(system);
+    if (is_big_endian())
+        return system;
+    return bswap_64(system);
 }
 
 uint64_t big_to_system_endian(uint64_t big) {
-	if (is_big_endian()) return big;
-	return bswap_64(big);
+    if (is_big_endian())
+        return big;
+    return bswap_64(big);
 }
 
 uint32_t system_to_big_endian(uint32_t system) {
-	if (is_big_endian()) return system;
-	return bswap_32(system);
+    if (is_big_endian())
+        return system;
+    return bswap_32(system);
 }
 
 uint32_t big_to_system_endian(uint32_t big) {
-	if (is_big_endian()) return big;
-	return bswap_32(big);
+    if (is_big_endian())
+        return big;
+    return bswap_32(big);
 }
 
 #endif

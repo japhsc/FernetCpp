@@ -1,0 +1,70 @@
+# FernetCpp style
+BasedOnStyle: Google
+
+# Spaces for indentation (consistent across all tools/diffs)
+UseTab: Never
+TabWidth: 4
+IndentWidth: 4
+
+# Same-line braces (K&R / Attach style)
+BreakBeforeBraces: Attach
+
+# Allow compact single-line functions (e.g. ~FERNET(){}, get_key())
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+# Pointer and reference alignment: attach to type (Type* var)
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+
+# Access modifiers indented one level inside class body
+AccessModifierOffset: -4
+
+# Column limit
+ColumnLimit: 100
+
+# Spaces: control statements get a space before paren, functions don't
+SpaceBeforeParens: ControlStatements
+SpacesInAngles: Never
+SpaceAfterCStyleCast: true
+
+# No space before initializer list colon
+SpaceBeforeCtorInitializerColon: false
+SpaceBeforeInheritanceColon: false
+SpaceBeforeRangeBasedForLoopColon: true
+
+# Empty line handling
+MaxEmptyLinesToKeep: 2
+KeepEmptyLinesAtTheStartOfBlocks: true
+
+# Include sorting: keep our order (system headers, then local)
+SortIncludes: Never
+
+# Align after open bracket for continued lines
+AlignAfterOpenBracket: DontAlign
+
+# Penalties to avoid unnecessary line breaks
+PenaltyBreakAssignment: 100
+PenaltyBreakBeforeFirstCallParameter: 50
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 200
+
+# Line break style: operator at start of new line (easier to scan)
+BreakBeforeBinaryOperators: NonAssignment
+
+# Indent case labels
+IndentCaseLabels: false
+
+# Preprocessor directives at column 0 (modern style)
+IndentPPDirectives: BeforeHash
+
+# No space before trailing comments
+SpacesBeforeTrailingComments: 2
+
+# Don't reflow doc comments
+ReflowComments: false
