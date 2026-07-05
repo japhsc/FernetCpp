@@ -5,6 +5,8 @@
 #include <iostream>  // std::cout
 #include <iomanip>   // std::setfill, std::setw
 
+namespace fernet {
+
 void print(unsigned char* c_data, size_t len) {
     int l = 0;
     std::cout << "data (" << len << " byte): " << std::endl
@@ -29,5 +31,7 @@ void print(unsigned char* c_data, size_t len) {
     std::cout  << std::endl << "0b" << std::bitset<sizeof(int)*8>(rest).to_string() << std::endl;
     */
 }
+
+} // namespace fernet
 
 #endif

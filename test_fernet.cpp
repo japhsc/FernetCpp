@@ -7,6 +7,8 @@
 #include <iostream>
 #include <string>
 
+using namespace fernet;
+
 static int tests = 0, passed = 0;
 
 // Key shared with Python compatibility tests

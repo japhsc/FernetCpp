@@ -6,6 +6,8 @@
 
 #define ENCODE_URL
 
+namespace fernet {
+
 typedef unsigned char BYTE;
 
 #ifndef ENCODE_URL
@@ -110,5 +112,7 @@ static void base64_decode(const BYTE* b_in, size_t b_in_len, BYTE** b_out, size_
     }
     *b_out_len = b;
 }
+
+} // namespace fernet
 
 #endif

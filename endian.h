@@ -35,6 +35,8 @@
     #include <byteswap.h>
 #endif
 
+namespace fernet {
+
 static bool is_big_endian(void) noexcept {
     union {
         uint32_t i;
@@ -54,5 +56,7 @@ static uint64_t big_to_system_endian(uint64_t big) noexcept {
         return big;
     return bswap_64(big);
 }
+
+} // namespace fernet
 
 #endif

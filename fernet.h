@@ -17,6 +17,8 @@
 #include <cassert>  // assert
 #include <string_view>
 
+namespace fernet {
+
 constexpr auto FERNET_VERSION = 0x80;
 
 constexpr auto FERNET_OK = 0;
@@ -313,5 +315,7 @@ public:
         return ret;
     }
 };
+
+} // namespace fernet
 
 #endif
