@@ -15,7 +15,9 @@
 #include <cstdlib>  // malloc, free
 #include <cstring>  // memcpy, memset
 #include <cassert>  // assert
+#include <optional>
 #include <string_view>
+#include <vector>
 
 namespace fernet {
 
@@ -175,109 +177,87 @@ public:
     [[nodiscard]] std::string get_key() { return str_key; }
 
     /// Encrypt plaintext into a Fernet token.
-    /// @param _plain      Input plaintext bytes
-    /// @param _plain_len  Length of the plaintext
-    /// @param _token      [out] Allocated Fernet token bytes (caller must free)
-    /// @param _token_len  [out] Length of the token
-    /// @return FERNET_OK on success, or a negative error code
-    [[nodiscard]] int encrypt(BYTE* _plain, const size_t _plain_len, BYTE** _token, size_t* _token_len) {
-        if (!_plain)
-            return FERNET_ERROR_POINTER;
+    /// @param plain       Input plaintext bytes
+    /// @param plain_len   Length of the plaintext
+    /// @return The Fernet token bytes, or std::nullopt on error
+    [[nodiscard]] std::optional<std::vector<BYTE>> encrypt(
+        const BYTE* plain, size_t plain_len) {
+        if (!plain)
+            return std::nullopt;
 
-        // Buffer
-        size_t cipher_len = _plain_len + pad_len(_plain_len, block_len);
+        size_t cipher_len = plain_len + pad_len(plain_len, block_len);
         size_t token_len = header_len + cipher_len + hmac_len;
-        *_token = (BYTE*) malloc(token_len);
-        if (!*_token)
-            return FERNET_ERROR_MALLOC;
+        std::vector<BYTE> token(token_len);
 
-        // token pointer
-        BYTE* header = *_token;
+        BYTE* header = token.data();
         BYTE* cipher = header + header_len;
         BYTE* tsdata = header + sizeof(BYTE);
         BYTE* ivdata = tsdata + sizeof(uint64_t);
 
-        // Version
         *header = (BYTE) FERNET_VERSION;
 
-        // Timestamp
         uint64_t ts = timestamp_big();
         memcpy(tsdata, &ts, sizeof(uint64_t));
 
-        // Generate a random IV
         CryptoPP::SecByteBlock iv(block_len);
         rnd.GenerateBlock(iv, iv.size());
         memcpy(ivdata, iv.data(), iv.size());
 
-        // Encrypt
-        cipher_len = _plain_len;
-        if (!byte_encrypt(iv, _plain, cipher, &cipher_len)) {
-            free(*_token);
-            return FERNET_ERROR_MALLOC;
-        }
+        cipher_len = plain_len;
+        if (!byte_encrypt(iv, const_cast<BYTE*>(plain), cipher, &cipher_len))
+            return std::nullopt;
 
         size_t pre_token_len = header_len + cipher_len;
-        BYTE* hmac = *_token + pre_token_len;
-        byte_HMAC(*_token, &pre_token_len, hmac);
+        BYTE* hmac = token.data() + pre_token_len;
+        byte_HMAC(token.data(), &pre_token_len, hmac);
 
-        *_token_len = pre_token_len + hmac_len;
-
-        return FERNET_OK;
+        token.resize(pre_token_len + hmac_len);
+        return token;
     }
 
     /// Decrypt a Fernet token back into plaintext.
-    /// @param _token      Input Fernet token bytes
-    /// @param _token_len  Length of the token
-    /// @param _plain      [out] Allocated decrypted plaintext (caller must free)
-    /// @param _plain_len  [out] Length of the plaintext
-    /// @return FERNET_OK on success, or a negative error code
-    [[nodiscard]] int decrypt(BYTE* _token, const size_t _token_len, BYTE** _plain, size_t* _plain_len) {
-        if (!_token)
-            return FERNET_ERROR_POINTER;
+    /// @param token       Input Fernet token bytes
+    /// @param token_len   Length of the token
+    /// @return The decrypted plaintext, or std::nullopt on error
+    [[nodiscard]] std::optional<std::vector<BYTE>> decrypt(
+        const BYTE* token, size_t token_len) {
+        if (!token)
+            return std::nullopt;
 
-        // Buffer
-        *_plain = (BYTE*) malloc(_token_len);
-        if (!*_plain)
-            return FERNET_ERROR_MALLOC;
+        const BYTE* version = token;
+        const BYTE* byte_ts = token + sizeof(BYTE);
+        const BYTE* byte_iv = token + sizeof(BYTE) + sizeof(uint64_t);
+        const BYTE* cipher = token + header_len;
 
-        BYTE* version = _token;
-        BYTE* byte_ts = _token + sizeof(BYTE);
-        BYTE* byte_iv = _token + sizeof(BYTE) + sizeof(uint64_t);
-        BYTE* cipher = _token + header_len;
-
-        if (*version != FERNET_VERSION) {
-            free(*_plain);
-            return FERNET_ERROR_VERSION;
-        }
+        if (*version != FERNET_VERSION)
+            return std::nullopt;
 
         uint64_t ts;
         memcpy(&ts, byte_ts, sizeof(uint64_t));
-        if (!valid_age(ts)) {
-            free(*_plain);
-            return FERNET_ERROR_TIMESTAMP;
-        }
+        if (!valid_age(ts))
+            return std::nullopt;
 
-        if (!verify(_token, _token_len)) {
-            free(*_plain);
-            return FERNET_ERROR_WRONG_KEY;
-        }
-        *_plain_len = _token_len - header_len - hmac_len;
+        if (!verify(token, token_len))
+            return std::nullopt;
+
+        size_t plain_len = token_len - header_len - hmac_len;
+        std::vector<BYTE> plain(plain_len);
 
         CryptoPP::SecByteBlock iv(byte_iv, block_len);
-        if (!byte_decrypt(iv, cipher, *_plain, _plain_len)) {
-            free(*_plain);
-            return FERNET_ERROR_WRONG_KEY;
-        }
-        return FERNET_OK;
+        if (!byte_decrypt(iv, const_cast<BYTE*>(cipher), plain.data(), &plain_len))
+            return std::nullopt;
+
+        plain.resize(plain_len);
+        return plain;
     }
 
-    [[nodiscard]] bool verify(BYTE* _token, const size_t _tokenLen) {
+    [[nodiscard]] bool verify(const BYTE* _token, size_t _tokenLen) {
         if (!_token)
             return false;
         size_t preTokenLen = _tokenLen - hmac_len;
-        BYTE* hmac_token = _token + preTokenLen;
+        const BYTE* hmac_token = _token + preTokenLen;
         BYTE hmac_calc[CryptoPP::HMAC<CryptoPP::SHA256>::DIGESTSIZE];
-        byte_HMAC(_token, &preTokenLen, hmac_calc);
+        byte_HMAC(const_cast<BYTE*>(_token), &preTokenLen, hmac_calc);
         volatile int result = 0;
         for (size_t i = 0; i < hmac_len; ++i)
             result |= hmac_token[i] ^ hmac_calc[i];
@@ -285,34 +265,34 @@ public:
     }
 
     /// Encrypt plaintext and return a base64-encoded Fernet token string.
-    /// @param _plain      Input plaintext bytes
-    /// @param _plainLen   Length of the plaintext
-    /// @param _token      [out] Allocated base64-encoded token (caller must free)
-    /// @param _tokenLen   [out] Length of the base64-encoded token
-    /// @return true on success
-    [[nodiscard]] bool encrypt64(BYTE* _plain, const size_t _plainLen, BYTE** _token, size_t* _tokenLen) {
-        BYTE* _cipher = 0;
-        size_t _cipherLen;
-        if (encrypt(_plain, _plainLen, &_cipher, &_cipherLen) != FERNET_OK)
-            return false;
-        base64_encode(_cipher, _cipherLen, _token, _tokenLen);
-        free(_cipher);
-        return true;
+    /// @param plain       Input plaintext bytes
+    /// @param plain_len   Length of the plaintext
+    /// @return Base64-encoded token string, or std::nullopt on error
+    [[nodiscard]] std::optional<std::string> encrypt64(
+        const BYTE* plain, size_t plain_len) {
+        auto cipher = encrypt(plain, plain_len);
+        if (!cipher)
+            return std::nullopt;
+        BYTE* b64 = nullptr;
+        size_t b64_len = 0;
+        base64_encode(cipher->data(), cipher->size(), &b64, &b64_len);
+        std::string result((char*) b64, b64_len);
+        free(b64);
+        return result;
     }
 
     /// Decrypt a base64-encoded Fernet token back into plaintext.
-    /// @param _token      Input base64-encoded Fernet token bytes
-    /// @param _tokenLen   Length of the base64-encoded token
-    /// @param _plain      [out] Allocated decrypted plaintext (caller must free)
-    /// @param _plainLen   [out] Length of the plaintext
-    /// @return true on success
-    [[nodiscard]] bool decrypt64(BYTE* _token, const size_t _tokenLen, BYTE** _plain, size_t* _plainLen) {
-        BYTE* _cipher = 0;
-        size_t _cipherLen;
-        base64_decode(_token, _tokenLen, &_cipher, &_cipherLen);
-        bool ret = decrypt(_cipher, _cipherLen, _plain, _plainLen) == FERNET_OK;
-        free(_cipher);
-        return ret;
+    /// @param token       Input base64-encoded Fernet token bytes
+    /// @param token_len   Length of the base64-encoded token
+    /// @return The decrypted plaintext, or std::nullopt on error
+    [[nodiscard]] std::optional<std::vector<BYTE>> decrypt64(
+        const BYTE* token, size_t token_len) {
+        BYTE* raw = nullptr;
+        size_t raw_len = 0;
+        base64_decode(token, token_len, &raw, &raw_len);
+        auto result = decrypt(raw, raw_len);
+        free(raw);
+        return result;
     }
 };
 

@@ -35,12 +35,11 @@ int main(int argc, char** argv) {
     // --token mode: output a token for Python cross-check
     if (argc == 2 && std::string(argv[1]) == "--token") {
         FERNET fernet(compatKey, 3600);
-        BYTE* token = nullptr;
-        size_t tokenLen = 0;
-        assert(fernet.encrypt64((BYTE*) compatMsg.data(), compatMsg.size(), &token, &tokenLen));
-        std::cout.write((char*) token, tokenLen);
-        free(token);
-        return 0;
+        auto token = fernet.encrypt64(
+            (const BYTE*) compatMsg.data(), compatMsg.size());
+        if (token)
+            std::cout << *token;
+        return token ? 0 : 1;
     }
 
     std::cout << "FernetCpp Tests" << std::endl << "===============" << std::endl;
@@ -54,48 +53,38 @@ int main(int argc, char** argv) {
         FERNET fernet("", 300);
         std::string msg = "Hello, Fernet!";
 
-        BYTE* token = nullptr;
-        size_t tokenLen = 0;
-        assert(fernet.encrypt64((BYTE*) msg.data(), msg.size(), &token, &tokenLen));
+        auto token = fernet.encrypt64(
+            (const BYTE*) msg.data(), msg.size());
+        assert(token);
 
-        BYTE* plain = nullptr;
-        size_t plainLen = 0;
-        bool ok = fernet.decrypt64(token, tokenLen, &plain, &plainLen);
+        auto plain = fernet.decrypt64(
+            (const BYTE*) token->data(), token->size());
 
-        if (ok && plainLen == msg.size() && memcmp(plain, msg.data(), plainLen) == 0) {
+        if (plain && plain->size() == msg.size()
+            && memcmp(plain->data(), msg.data(), plain->size()) == 0) {
             OK;
         } else {
             FAIL("round-trip mismatch");
         }
-        free(token);
-        if (ok)
-            free(plain);
     }
 
-    TEST("encrypt/decrypt (binary, error codes)");
+    TEST("encrypt/decrypt (binary)");
     {
         FERNET fernet("", 300);
         std::string msg = "binary test";
 
-        BYTE* token = nullptr;
-        size_t tokenLen = 0;
-        int rc = fernet.encrypt((BYTE*) msg.data(), msg.size(), &token, &tokenLen);
-        if (rc != FERNET_OK) {
-            FAIL("encrypt returned " << rc);
-            free(token);
+        auto token = fernet.encrypt(
+            (const BYTE*) msg.data(), msg.size());
+        if (!token) {
+            FAIL("encrypt failed");
         } else {
-            BYTE* plain = nullptr;
-            size_t plainLen = 0;
-            rc = fernet.decrypt(token, tokenLen, &plain, &plainLen);
-            if (rc == FERNET_OK && plainLen == msg.size()
-                && memcmp(plain, msg.data(), plainLen) == 0) {
+            auto plain = fernet.decrypt(token->data(), token->size());
+            if (plain && plain->size() == msg.size()
+                && memcmp(plain->data(), msg.data(), plain->size()) == 0) {
                 OK;
             } else {
-                FAIL("decrypt returned " << rc);
+                FAIL("decrypt failed");
             }
-            free(token);
-            if (rc == FERNET_OK)
-                free(plain);
         }
     }
 
@@ -104,22 +93,18 @@ int main(int argc, char** argv) {
         FERNET fernet("", 300);
         std::string msg;
 
-        BYTE* token = nullptr;
-        size_t tokenLen = 0;
-        assert(fernet.encrypt64((BYTE*) msg.data(), msg.size(), &token, &tokenLen));
+        auto token = fernet.encrypt64(
+            (const BYTE*) msg.data(), msg.size());
+        assert(token);
 
-        BYTE* plain = nullptr;
-        size_t plainLen = 0;
-        bool ok = fernet.decrypt64(token, tokenLen, &plain, &plainLen);
+        auto plain = fernet.decrypt64(
+            (const BYTE*) token->data(), token->size());
 
-        if (ok && plainLen == 0) {
+        if (plain && plain->size() == 0) {
             OK;
         } else {
             FAIL("empty round-trip mismatch");
         }
-        free(token);
-        if (ok)
-            free(plain);
     }
 
     TEST("decrypt with wrong key fails");
@@ -128,20 +113,17 @@ int main(int argc, char** argv) {
         FERNET fernet2("", 300);
         std::string msg = "secret";
 
-        BYTE* token = nullptr;
-        size_t tokenLen = 0;
-        assert(fernet1.encrypt64((BYTE*) msg.data(), msg.size(), &token, &tokenLen));
+        auto token = fernet1.encrypt64(
+            (const BYTE*) msg.data(), msg.size());
+        assert(token);
 
-        BYTE* plain = nullptr;
-        size_t plainLen = 0;
-        bool ok = fernet2.decrypt64(token, tokenLen, &plain, &plainLen);
-        if (!ok) {
+        auto plain = fernet2.decrypt64(
+            (const BYTE*) token->data(), token->size());
+        if (!plain) {
             OK;
         } else {
             FAIL("should have failed with wrong key");
-            free(plain);
         }
-        free(token);
     }
 
     TEST("decrypt expired token fails");
@@ -149,20 +131,17 @@ int main(int argc, char** argv) {
         FERNET fernet("", 0);  // 0-second TTL
         std::string msg = "expired";
 
-        BYTE* token = nullptr;
-        size_t tokenLen = 0;
-        assert(fernet.encrypt64((BYTE*) msg.data(), msg.size(), &token, &tokenLen));
+        auto token = fernet.encrypt64(
+            (const BYTE*) msg.data(), msg.size());
+        assert(token);
 
-        BYTE* plain = nullptr;
-        size_t plainLen = 0;
-        bool ok = fernet.decrypt64(token, tokenLen, &plain, &plainLen);
-        if (!ok) {
+        auto plain = fernet.decrypt64(
+            (const BYTE*) token->data(), token->size());
+        if (!plain) {
             OK;
         } else {
             FAIL("should have failed (expired)");
-            free(plain);
         }
-        free(token);
     }
 
     TEST("decrypt tampered token fails");
@@ -170,23 +149,19 @@ int main(int argc, char** argv) {
         FERNET fernet("", 300);
         std::string msg = "tamper me";
 
-        BYTE* token = nullptr;
-        size_t tokenLen = 0;
-        int rcEnc = fernet.encrypt((BYTE*) msg.data(), msg.size(), &token, &tokenLen);
-        assert(rcEnc == FERNET_OK);
+        auto token = fernet.encrypt(
+            (const BYTE*) msg.data(), msg.size());
+        assert(token);
 
-        // Flip a bit in the HMAC portion (last byte of raw binary token)
-        token[tokenLen - 1] ^= 0x01;
+        // Flip a bit in the HMAC portion (last byte)
+        token->back() ^= 0x01;
 
-        BYTE* plain = nullptr;
-        size_t plainLen = 0;
-        int rc = fernet.decrypt(token, tokenLen, &plain, &plainLen);
-        if (rc == FERNET_ERROR_WRONG_KEY) {
+        auto plain = fernet.decrypt(token->data(), token->size());
+        if (!plain) {
             OK;
         } else {
-            FAIL("should have failed (tampered token), got " << rc);
+            FAIL("should have failed (tampered token)");
         }
-        free(token);
     }
 
     TEST("decrypt wrong version byte fails");
@@ -194,29 +169,27 @@ int main(int argc, char** argv) {
         FERNET fernet("", 300);
         std::string msg = "version test";
 
-        BYTE* token = nullptr;
-        size_t tokenLen = 0;
-        assert(fernet.encrypt64((BYTE*) msg.data(), msg.size(), &token, &tokenLen));
+        auto token = fernet.encrypt64(
+            (const BYTE*) msg.data(), msg.size());
+        assert(token);
 
         // Decode, flip version byte, re-encode
         BYTE* raw = nullptr;
         size_t rawLen = 0;
-        base64_decode(token, tokenLen, &raw, &rawLen);
+        base64_decode((const BYTE*) token->data(), token->size(), &raw, &rawLen);
         raw[0] ^= 0xFF;  // corrupt version byte
         BYTE* badToken = nullptr;
         size_t badTokenLen = 0;
         base64_encode(raw, rawLen, &badToken, &badTokenLen);
 
-        BYTE* plain = nullptr;
-        size_t plainLen = 0;
-        bool ok = fernet.decrypt64(badToken, badTokenLen, &plain, &plainLen);
-        if (!ok) {
+        std::string badStr((char*) badToken, badTokenLen);
+        auto plain = fernet.decrypt64(
+            (const BYTE*) badStr.data(), badStr.size());
+        if (!plain) {
             OK;
         } else {
             FAIL("should have failed (wrong version)");
-            free(plain);
         }
-        free(token);
         free(raw);
         free(badToken);
     }
@@ -243,29 +216,25 @@ int main(int argc, char** argv) {
         }
     }
 
-    TEST("encrypt with null plain returns error");
+    TEST("encrypt with null plain returns nullopt");
     {
         FERNET fernet("", 300);
-        BYTE* token = nullptr;
-        size_t tokenLen = 0;
-        int rc = fernet.encrypt(nullptr, 10, &token, &tokenLen);
-        if (rc == FERNET_ERROR_POINTER) {
+        auto token = fernet.encrypt(nullptr, 10);
+        if (!token) {
             OK;
         } else {
-            FAIL("expected FERNET_ERROR_POINTER, got " << rc);
+            FAIL("expected nullopt");
         }
     }
 
-    TEST("decrypt with null token returns error");
+    TEST("decrypt with null token returns nullopt");
     {
         FERNET fernet("", 300);
-        BYTE* plain = nullptr;
-        size_t plainLen = 0;
-        int rc = fernet.decrypt(nullptr, 100, &plain, &plainLen);
-        if (rc == FERNET_ERROR_POINTER) {
+        auto plain = fernet.decrypt(nullptr, 100);
+        if (!plain) {
             OK;
         } else {
-            FAIL("expected FERNET_ERROR_POINTER, got " << rc);
+            FAIL("expected nullopt");
         }
     }
 
@@ -277,68 +246,58 @@ int main(int argc, char** argv) {
     // The Python cross-check is handled by test_compat.py.
     auto freshToken = [](bool pad) -> std::string {
         FERNET f(compatKey, 600);
-        BYTE* t = nullptr;
-        size_t tl = 0;
-        assert(f.encrypt64((BYTE*)compatMsg.data(), compatMsg.size(), &t, &tl));
-        std::string s((char*)t, tl);
-        free(t);
-        if (!pad && !s.empty() && s.back() == '=')
-            s.pop_back();
-        return s;
+        auto tok = f.encrypt64(
+            (const BYTE*) compatMsg.data(), compatMsg.size());
+        assert(tok);
+        if (!pad && !tok->empty() && tok->back() == '=')
+            tok->pop_back();
+        return *tok;
     };
 
     TEST("decrypt self-encrypted token (padded)");
     {
         std::string tok = freshToken(true);
         FERNET fernet(compatKey, 600);
-        BYTE* plain = nullptr;
-        size_t plainLen = 0;
-        bool ok = fernet.decrypt64((BYTE*) tok.data(), tok.size(), &plain, &plainLen);
-        if (ok && plainLen == compatMsg.size() && memcmp(plain, compatMsg.data(), plainLen) == 0) {
+        auto plain = fernet.decrypt64(
+            (const BYTE*) tok.data(), tok.size());
+        if (plain && plain->size() == compatMsg.size()
+            && memcmp(plain->data(), compatMsg.data(), plain->size()) == 0) {
             OK;
         } else {
             FAIL("failed to decrypt token (padded)");
         }
-        if (ok)
-            free(plain);
     }
 
     TEST("decrypt self-encrypted token (unpadded)");
     {
         std::string tok = freshToken(false);
         FERNET fernet(compatKey, 600);
-        BYTE* plain = nullptr;
-        size_t plainLen = 0;
-        bool ok = fernet.decrypt64(
-            (BYTE*) tok.data(), tok.size(), &plain, &plainLen);
-        if (ok && plainLen == compatMsg.size() && memcmp(plain, compatMsg.data(), plainLen) == 0) {
+        auto plain = fernet.decrypt64(
+            (const BYTE*) tok.data(), tok.size());
+        if (plain && plain->size() == compatMsg.size()
+            && memcmp(plain->data(), compatMsg.data(), plain->size()) == 0) {
             OK;
         } else {
             FAIL("failed to decrypt token (unpadded)");
         }
-        if (ok)
-            free(plain);
     }
 
     TEST("C++ encrypt/decrypt with Python-generated key");
     {
         FERNET fernet(compatKey, 3600);
-        BYTE* token = nullptr;
-        size_t tokenLen = 0;
-        assert(fernet.encrypt64((BYTE*) compatMsg.data(), compatMsg.size(), &token, &tokenLen));
+        auto token = fernet.encrypt64(
+            (const BYTE*) compatMsg.data(), compatMsg.size());
+        assert(token);
 
-        BYTE* plain = nullptr;
-        size_t plainLen = 0;
-        bool ok = fernet.decrypt64(token, tokenLen, &plain, &plainLen);
+        auto plain = fernet.decrypt64(
+            (const BYTE*) token->data(), token->size());
 
-        if (ok && plainLen == compatMsg.size() && memcmp(plain, compatMsg.data(), plainLen) == 0) {
+        if (plain && plain->size() == compatMsg.size()
+            && memcmp(plain->data(), compatMsg.data(), plain->size()) == 0) {
             OK;
         } else {
             FAIL("round-trip with Python key failed");
         }
-        free(token);
-        if (ok)
-            free(plain);
     }
 
     // -- Summary ---------------------------------------------------------
